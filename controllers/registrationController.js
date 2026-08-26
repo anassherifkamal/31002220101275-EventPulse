@@ -1,39 +1,85 @@
 const Registration = require('../models/Registration');
 const Event = require('../models/Event');
-const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
+const asyncHandler = require('../utils/asyncHandler');
 
+// POST /api/registrations - Register logged-in user for an event
 exports.registerForEvent = asyncHandler(async (req, res, next) => {
-  const { eventId } = req.body;
-  const event = await Event.findById(eventId);
-  if (!event) return next(new AppError('Event not found', 404));
+  const userId = req.user.userId;
+  const eventId = req.body.event;
 
-  if (event.registrationCount >= event.capacity) {
-    return next(new AppError('Event capacity reached', 400));
+  if (!eventId) {
+    return next(new AppError('Please provide an event ID', 400));
   }
 
-  const existingReg = await Registration.findOne({ user: req.user._id, event: eventId });
-  if (existingReg) return next(new AppError('You are already registered for this event', 400));
+  // 1. Check if event exists
+  const event = await Event.findById(eventId);
+  if (!event) {
+    return next(new AppError('Event not found', 404));
+  }
 
-  const registration = await Registration.create({ user: req.user._id, event: eventId });
-  event.registrationCount += 1;
-  await event.save();
-
-  res.status(201).json({ status: 'success', data: { registration } });
-});
-
-exports.getMyRegistrations = asyncHandler(async (req, res, next) => {
-  const registrations = await Registration.find({ user: req.user._id }).populate({
-    path: 'event',
-    populate: { path: 'category' }
+  // 2. Check for duplicate registration
+  const existingRegistration = await Registration.findOne({
+    event: eventId,
+    attendee: userId,
   });
-  res.status(200).json({ status: 'success', results: registrations.length, data: { registrations } });
+  if (existingRegistration) {
+    return next(new AppError('You are already registered for this event', 400));
+  }
+
+  // 3. Enforce event capacity
+  const currentCount = await Registration.countDocuments({ event: eventId });
+  if (currentCount >= event.capacity) {
+    return next(new AppError('This event is full', 400));
+  }
+
+  // 4. Create registration
+  const registration = await Registration.create({
+    event: eventId,
+    attendee: userId,
+  });
+
+  res.status(201).json({
+    status: 'success',
+    data: registration,
+  });
 });
 
-exports.cancelRegistration = asyncHandler(async (req, res, next) => {
-  const registration = await Registration.findOneAndDelete({ _id: req.params.id, user: req.user._id });
-  if (!registration) return next(new AppError('Registration not found or unauthorized', 404));
+// GET /api/registrations/my - Get registrations for the logged-in user
+exports.getMyRegistrations = asyncHandler(async (req, res, next) => {
+  const userId = req.user.userId;
 
-  await Event.findByIdAndUpdate(registration.event, { $inc: { registrationCount: -1 } });
-  res.status(204).json({ status: 'success', data: null });
+  const registrations = await Registration.find({ attendee: userId }).populate({
+    path: 'event',
+    select: 'title description date city venue capacity',
+  });
+
+  res.status(200).json({
+    status: 'success',
+    results: registrations.length,
+    data: registrations,
+  });
+});
+
+// DELETE /api/registrations/:id - Cancel a registration
+exports.cancelRegistration = asyncHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+  const registrationId = req.params.id;
+
+  const registration = await Registration.findById(registrationId);
+  if (!registration) {
+    return next(new AppError('Registration not found', 404));
+  }
+
+  // Ownership check: users can only cancel their own registrations
+  if (registration.attendee.toString() !== userId) {
+    return next(new AppError('You can only cancel your own registration', 403));
+  }
+
+  await registration.deleteOne();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Registration cancelled successfully',
+  });
 });

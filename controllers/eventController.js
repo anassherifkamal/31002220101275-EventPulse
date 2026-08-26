@@ -1,65 +1,86 @@
 const Event = require('../models/Event');
-const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
+const asyncHandler = require('../utils/asyncHandler');
 
-exports.createEvent = asyncHandler(async (req, res, next) => {
-  const event = await Event.create(req.body);
-  res.status(201).json({ status: 'success', data: { event } });
-});
-
+// @desc    Get all events
+// @route   GET /api/events
+// @access  Public
 exports.getEvents = asyncHandler(async (req, res, next) => {
-  const { category, city, startDate, endDate, search, sort, page = 1, limit = 10 } = req.query;
-  let query = {};
-
-  if (category) query.category = category;
-  if (city) query.city = new RegExp(city, 'i');
-  if (startDate || endDate) {
-    query.date = {};
-    if (startDate) query.date.$gte = new Date(startDate);
-    if (endDate) query.date.$lte = new Date(endDate);
-  }
-  if (search) {
-    query.$text = { $search: search };
-  }
-
-  let reqQuery = Event.find(query).populate('category');
-
-  if (sort === 'popularity') {
-    reqQuery = reqQuery.sort({ registrationCount: -1 });
-  } else if (sort === 'date') {
-    reqQuery = reqQuery.sort({ date: 1 });
-  } else {
-    reqQuery = reqQuery.sort({ createdAt: -1 });
-  }
-
-  const skip = (page - 1) * limit;
-  reqQuery = reqQuery.skip(skip).limit(Number(limit));
-
-  const events = await reqQuery;
-  const total = await Event.countDocuments(query);
+  const events = await Event.find().sort({ date: 1 });
 
   res.status(200).json({
     status: 'success',
     results: events.length,
-    pagination: { total, page: Number(page), pages: Math.ceil(total / limit) },
-    data: { events }
+    data: events,
   });
 });
 
-exports.getEvent = asyncHandler(async (req, res, next) => {
-  const event = await Event.findById(req.params.id).populate('category');
-  if (!event) return next(new AppError('Event not found', 404));
-  res.status(200).json({ status: 'success', data: { event } });
+// @desc    Get single event by ID
+// @route   GET /api/events/:id
+// @access  Public
+exports.getEventById = asyncHandler(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new AppError('No event found with that ID', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: event,
+  });
 });
 
+// @desc    Create new event
+// @route   POST /api/events
+// @access  Private (Admin only)
+exports.createEvent = asyncHandler(async (req, res, next) => {
+  const newEvent = await Event.create({
+    ...req.body,
+    createdBy: req.user._id,
+  });
+
+  res.status(201).json({
+    status: 'success',
+    data: newEvent,
+  });
+});
+
+// @desc    Update event details
+// @route   PATCH /api/events/:id
+// @access  Private (Admin only)
 exports.updateEvent = asyncHandler(async (req, res, next) => {
-  const event = await Event.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!event) return next(new AppError('Event not found', 404));
-  res.status(200).json({ status: 'success', data: { event } });
+  const updatedEvent = await Event.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  if (!updatedEvent) {
+    return next(new AppError('No event found with that ID', 404));
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: updatedEvent,
+  });
 });
 
+// @desc    Delete an event
+// @route   DELETE /api/events/:id
+// @access  Private (Admin only)
 exports.deleteEvent = asyncHandler(async (req, res, next) => {
   const event = await Event.findByIdAndDelete(req.params.id);
-  if (!event) return next(new AppError('Event not found', 404));
-  res.status(204).json({ status: 'success', data: null });
+
+  if (!event) {
+    return next(new AppError('No event found with that ID', 404));
+  }
+
+  res.status(204).json({
+    status: 'success',
+    data: null,
+  });
 });
