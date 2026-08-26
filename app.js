@@ -60,41 +60,44 @@ app.get('/api-docs/swagger.json', (req, res) => {
 });
 
 // 5. Standalone CDN-based Swagger UI HTML Route
+// app.get('/api-docs', (req, res) => {
+//   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+//   return res.status(200).send(`
+//     <!DOCTYPE html>
+//     <html lang="en">
+//     <head>
+//       <meta charset="UTF-8">
+//       <title>EventPulse API Documentation</title>
+//       <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+//       <style>
+//         html { box-sizing: border-box; }
+//         *, *:before, *:after { box-sizing: inherit; }
+//         body { margin: 0; background: #fafafa; }
+//       </style>
+//     </head>
+//     <body>
+//       <div id="swagger-ui"></div>
+//       <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"></script>
+//       <script>
+//         window.onload = function() {
+//           SwaggerUIBundle({
+//             url: "/api-docs/swagger.json",
+//             dom_id: '#swagger-ui',
+//             deepLinking: true,
+//             presets: [
+//               SwaggerUIBundle.presets.apis
+//             ]
+//           });
+//         };
+//       </script>
+//     </body>
+//     </html>
+//   `);
+// });
 app.get('/api-docs', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  return res.status(200).send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>EventPulse API Documentation</title>
-      <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
-      <style>
-        html { box-sizing: border-box; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin: 0; background: #fafafa; }
-      </style>
-    </head>
-    <body>
-      <div id="swagger-ui"></div>
-      <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"></script>
-      <script>
-        window.onload = function() {
-          SwaggerUIBundle({
-            url: "/api-docs/swagger.json",
-            dom_id: '#swagger-ui',
-            deepLinking: true,
-            presets: [
-              SwaggerUIBundle.presets.apis
-            ]
-          });
-        };
-      </script>
-    </body>
-    </html>
-  `);
+  return res.status(200).send('<h1>Swagger Docs are Loading...</h1>');
 });
-
 // Catch-All 404 Route Handler
 app.use((req, res) => {
   res.status(404).json({ status: 'fail', message: 'Route not found' });
