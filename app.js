@@ -221,21 +221,25 @@ io.on('connection', (socket) => {
 
 // --- Server and Database Initialization ---
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventpulse';
-
-let cachedConnection = null;
+const MONGO_URI = process.env.MONGO_URI;
 
 async function connectDB() {
-  if (cachedConnection) {
-    return cachedConnection;
+  if (!MONGO_URI) {
+    console.warn('Warning: MONGO_URI environment variable is missing!');
+    return;
   }
-  cachedConnection = await mongoose.connect(MONGO_URI);
-  console.log('Connected to MongoDB successfully');
-  return cachedConnection;
+  try {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(MONGO_URI);
+      console.log('Connected to MongoDB successfully');
+    }
+  } catch (err) {
+    console.error('Database connection error:', err);
+  }
 }
 
-// Ensure database connects on serverless invocation
-connectDB().catch((err) => console.error('Database connection error:', err));
+// Connect safely on serverless/local invocation
+connectDB();
 
 if (process.env.NODE_ENV !== 'production') {
   server.listen(PORT, () => {
@@ -244,5 +248,5 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export app for serverless/testing environments (like Vercel)
+// Export app for serverless environments (like Vercel)
 module.exports = app;
