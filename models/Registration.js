@@ -1,9 +1,22 @@
 const mongoose = require('mongoose');
 
-const registrationSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true }
-}, { timestamps: true });
+const registrationSchema = new mongoose.Schema(
+  {
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event',
+      required: [true, 'Registration must belong to an event'],
+    },
+    attendee: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Registration must belong to an attendee'],
+    },
+  },
+  { timestamps: true }
+);
 
-registrationSchema.index({ user: 1, event: 1 }, { unique: true });
+// Unique compound index prevents duplicate registrations at the DB level
+registrationSchema.index({ event: 1, attendee: 1 }, { unique: true });
+
 module.exports = mongoose.model('Registration', registrationSchema);
