@@ -24,23 +24,25 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const app = express();
 const server = http.createServer(app);
 
-const swaggerSpec = require('./config//swagger.json'); // or .swagger.json
+// Load your static JSON file
+const swaggerSpec = require('./swagger.json');
 
-// 1. Raw JSON Endpoint
+// 1. Raw JSON spec endpoint
 app.get('/api-docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json(swaggerSpec);
 });
 
-// 2. HTML UI Endpoint
+// 2. Standalone HTML Swagger UI endpoint
 app.get('/api-docs', (req, res) => {
-  const html = `
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <title>EventPulse API Documentation</title>
-      <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui.css" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.min.css" />
       <style>
         html { box-sizing: border-box; }
         *, *:before, *:after { box-sizing: inherit; }
@@ -49,11 +51,11 @@ app.get('/api-docs', (req, res) => {
     </head>
     <body>
       <div id="swagger-ui"></div>
-      <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-bundle.js" charset="UTF-8"></script>
-      <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.18.3/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.min.js"></script>
       <script>
         window.onload = function() {
-          window.ui = SwaggerUIBundle({
+          SwaggerUIBundle({
             url: "/api-docs/swagger.json",
             dom_id: '#swagger-ui',
             deepLinking: true,
@@ -67,9 +69,7 @@ app.get('/api-docs', (req, res) => {
       </script>
     </body>
     </html>
-  `;
-  res.setHeader('Content-Type', 'text/html');
-  res.send(html);
+  `);
 });
 
 // Initialize Socket.io Server
