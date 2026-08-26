@@ -24,6 +24,57 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const app = express();
 const server = http.createServer(app);
 
+const swaggerSpec = require('./config/swagger'); // Adjust path to swagger.js if needed
+
+// 1. Raw JSON Endpoint
+app.get('/api-docs/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// 2. Swagger UI Route
+app.get('/api-docs', (req, res) => {
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>EventPulse API Documentation</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@4/swagger-ui.css" />
+      <style>
+        html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin:0; background: #fafafa; }
+      </style>
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-bundle.js" charset="UTF-8"></script>
+      <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-standalone-preset.js" charset="UTF-8"></script>
+      <script>
+        window.onload = function() {
+          window.ui = SwaggerUIBundle({
+            url: "/api-docs/swagger.json",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIStandalonePreset
+            ],
+            plugins: [
+              SwaggerUIBundle.plugins.DownloadUrl
+            ],
+            layout: "StandaloneLayout"
+          });
+        };
+      </script>
+    </body>
+    </html>
+  `;
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
+
 // Initialize Socket.io Server
 const io = new Server(server, {
   cors: {
