@@ -1,86 +1,40 @@
-require('dotenv').config();
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-
-const http = require('http');
 const express = require('express');
-const { Server } = require('socket.io');
-const morgan = require('morgan');
+const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoSanitize = require('express-mongo-sanitize');
-const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/errorHandler');
-
-// Route Imports
-const authRoutes = require('./routes/authRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const registrationRoutes = require('./routes/registrationRoutes');
-const announcementRoutes = require('./routes/announcementRoutes');
-
-// Initialize Express App & HTTP Server
+// Initialize Express App and HTTP Server for Socket.io
 const app = express();
 const server = http.createServer(app);
-
-// Initialize Socket.io Server
 const io = new Server(server, {
   cors: {
     origin: '*',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
   },
 });
 
-// Attach Socket.io instance to Express app
-app.set('io', io);
-
-// Socket.io Connection Logic
-io.on('connection', (socket) => {
-  console.log(`Client connected: ${socket.id}`);
-
-  socket.on('join-event', (eventId) => {
-    socket.join(eventId);
-    console.log(`Socket ${socket.id} joined event room: ${eventId}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`Client disconnected: ${socket.id}`);
-  });
-});
-
-// Global Middlewares
-app.use(cors());
-app.use(morgan('dev'));
+// --- Middleware ---
 app.use(express.json());
+app.use(cors());
+app.use(mongoSanitize());
 
-// Express 5 mongoSanitize wrapper middleware
-app.use((req, res, next) => {
-  if (req.body) mongoSanitize.sanitize(req.body);
-  if (req.params) mongoSanitize.sanitize(req.params);
-  if (req.query) {
-    for (const key in req.query) {
-      if (typeof req.query[key] === 'object' && req.query[key] !== null) {
-        mongoSanitize.sanitize(req.query[key]);
-      }
-    }
-  }
-  next();
-});
-
-// OpenAPI / Swagger Documentation Setup
+// --- Swagger Documentation Configuration ---
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'EventPulse API',
+      title: 'EventPulse API Documentation',
       version: '1.0.0',
-      description: 'RESTful Event Management API with Real-Time Announcements',
+      description: 'API documentation for Auth, Events, Registrations, and Announcements',
     },
     servers: [
       {
-        url: 'http://localhost:5000',
-        description: 'Development Server',
+        url: process.env.BASE_URL || 'http://localhost:5000',
+        description: 'Server Environment',
       },
     ],
     components: {
@@ -93,45 +47,186 @@ const swaggerOptions = {
       },
     },
   },
-  apis: ['./routes/*.js', './app.js'],
+  apis: ['./app.js'], // Scans this file for Swagger/JSDoc annotations
 };
 
-const swaggerDocs = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+const swaggerSpecs = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-// Health Monitoring Endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    environment: process.env.NODE_ENV || 'development',
-    uptime: `${Math.floor(process.uptime())}s`,
-    timestamp: new Date().toISOString(),
+// --- Health Check Endpoint ---
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: API Health Check
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: Server is running successfully
+ */
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'success', message: 'EventPulse API is running' });
+});
+
+
+// --- AUTH ENDPOINTS ---
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Bad request or validation error
+ */
+app.post('/api/auth/register', (req, res) => {
+  // TODO: Implement user registration logic
+  res.status(201).json({ message: 'User registered successfully' });
+});
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Log in an existing user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *       401:
+ *         description: Invalid credentials
+ */
+app.post('/api/auth/login', (req, res) => {
+  // TODO: Implement user login logic
+  res.status(200).json({ token: 'sample-jwt-token' });
+});
+
+
+// --- EVENTS ENDPOINTS ---
+
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *     summary: Retrieve all events
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: A list of events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Internal server error
+ */
+app.get('/api/events', (req, res) => {
+  // TODO: Implement get all events logic
+  res.status(200).json([{ id: '1', title: 'Sample Event Pulse' }]);
+});
+
+/**
+ * @swagger
+ * /api/events:
+ *   post:
+ *     summary: Create a new event
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - date
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date-time
+ *     responses:
+ *       201:
+ *         description: Event created successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid token)
+ */
+app.post('/api/events', (req, res) => {
+  // TODO: Implement event creation logic and trigger Socket.io announcement if needed
+  io.emit('announcement', { message: 'New event created!' });
+  res.status(201).json({ message: 'Event created successfully' });
+});
+
+
+// --- Socket.io Connection Handler ---
+io.on('connection', (socket) => {
+  console.log(`Client connected: ${socket.id}`);
+
+  socket.on('disconnect', () => {
+    console.log(`Client disconnected: ${socket.id}`);
   });
 });
 
-// Mount Application API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/registrations', registrationRoutes);
-app.use('/api/announcements', announcementRoutes);
-
-// 404 Route Not Found Handler
-app.use((req, res, next) => {
-  res.status(404).json({ status: 'fail', message: 'Route not found' });
-});
-
-// Centralized Error Handling Middleware (Must be last)
-app.use(errorHandler);
-
-// Start Server (Guarded for Vercel / Automated Testing compatibility)
+// --- Server and Database Initialization ---
 const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventpulse';
 
-if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
-    server.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} with Socket.io enabled`);
-    });
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log('Connected to MongoDB successfully');
+    if (process.env.NODE_ENV !== 'production') {
+      server.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
+      });
+    }
+  })
+  .catch((err) => {
+    console.error('Database connection error:', err);
   });
-}
 
+// Export app for serverless/testing environments (like Vercel)
 module.exports = app;
