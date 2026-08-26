@@ -1,41 +1,58 @@
 const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const swaggerSpec = require('./swagger.json'); // Ensure swagger.json exists in your project root
 
 const app = express();
 
-// 1. Enable Global CORS (Fixes CORS blocks on Vercel)
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Enable basic CORS headers without needing third-party packages
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
-// 2. Configure Helmet Security (Disables CSP so CDN assets can load cleanly)
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
-  })
-);
-
-// Body parsing middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// 3. Health Check Route
+// Inlined Swagger Specification Object
+const swaggerSpec = {
+  openapi: '3.0.0',
+  info: {
+    title: 'EventPulse API',
+    version: '1.0.0',
+    description: 'API documentation for EventPulse backend services'
+  },
+  servers: [
+    {
+      url: 'https://eyouth-31002220101275-event-pulse.vercel.app',
+      description: 'Production Server'
+    }
+  ],
+  paths: {
+    '/health': {
+      get: {
+        summary: 'Health Check Endpoint',
+        responses: {
+          '200': { description: 'API is online' }
+        }
+      }
+    }
+  }
+};
+
+// 1. Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'success', message: 'EventPulse API is online' });
 });
 
-// 4. Raw Swagger JSON Endpoint
+// 2. Swagger JSON endpoint
 app.get('/api-docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.json(swaggerSpec);
 });
 
-// 5. Standalone Swagger UI HTML Route (Zero serverless file-system dependencies)
+// 3. Standalone Swagger UI HTML
 app.get('/api-docs', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(`
@@ -74,31 +91,14 @@ app.get('/api-docs', (req, res) => {
   `);
 });
 
-// --- Register Your API Routes Here ---
-// const eventRoutes = require('./routes/eventRoutes');
-// app.use('/api/events', eventRoutes);
-
-// 6. Catch-All 404 Route Handler
+// Fallback 404
 app.use((req, res) => {
   res.status(404).json({ status: 'fail', message: 'Route not found' });
 });
 
-// 7. Global Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: err.message || 'Internal server error'
-  });
-});
-
-// Export app for Vercel Serverless execution
 module.exports = app;
 
-// Local development server listener
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running locally on port ${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 }
