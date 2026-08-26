@@ -51,21 +51,37 @@ const swaggerOptions = {
 };
 
 const swaggerSpecs = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
-
-// --- Health Check Endpoint ---
-/**
- * @swagger
- * /:
- *   get:
- *     summary: API Health Check
- *     tags: [System]
- *     responses:
- *       200:
- *         description: Server is running successfully
- */
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'EventPulse API is running' });
+app.get('/api-docs', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>EventPulse API Documentation</title>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+        <style>
+          body { margin: 0; background: #fafafa; }
+        </style>
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+        <script>
+          window.onload = () => {
+            window.ui = SwaggerUIBundle({
+              url: '/api-docs-json',
+              dom_id: '#swagger-ui',
+              presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+              ],
+              layout: "BaseLayout"
+            });
+          };
+        </script>
+      </body>
+    </html>
+  `);
 });
 
 
