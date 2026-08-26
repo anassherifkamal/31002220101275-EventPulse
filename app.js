@@ -2,7 +2,7 @@ const express = require('express');
 
 const app = express();
 
-// Enable basic CORS headers
+// 1. Global CORS Middleware (No external 'cors' package needed)
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -13,9 +13,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Body Parser Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Inlined Swagger Specification Object
+// 2. Inline Swagger Specification Object (Eliminates filesystem crashes)
 const swaggerSpec = {
   openapi: '3.0.0',
   info: {
@@ -34,26 +36,31 @@ const swaggerSpec = {
       get: {
         summary: 'Health Check Endpoint',
         responses: {
-          '200': { description: 'API is online' }
+          '200': { description: 'API is online and healthy' }
         }
       }
     }
   }
 };
 
-// 1. Health check
+// 3. Health Check Route
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'EventPulse API is online' });
+  res.status(200).json({
+    status: 'ok',
+    environment: 'production',
+    uptime: process.uptime() + 's',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// 2. Raw JSON endpoint
+// 4. Raw Swagger JSON Endpoint
 app.get('/api-docs/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.json(swaggerSpec);
+  return res.status(200).json(swaggerSpec);
 });
 
-// 3. Fail-Safe API Documentation UI (using Redoc engine - never gets blocked by browser security)
-aapp.get('/api-docs', (req, res) => {
+// 5. Standalone CDN-based Swagger UI HTML Route
+app.get('/api-docs', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   return res.status(200).send(`
     <!DOCTYPE html>
@@ -61,7 +68,7 @@ aapp.get('/api-docs', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <title>EventPulse API Documentation</title>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.min.css" />
+      <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
       <style>
         html { box-sizing: border-box; }
         *, *:before, *:after { box-sizing: inherit; }
@@ -70,8 +77,7 @@ aapp.get('/api-docs', (req, res) => {
     </head>
     <body>
       <div id="swagger-ui"></div>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.min.js"></script>
+      <script src="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui-bundle.js"></script>
       <script>
         window.onload = function() {
           SwaggerUIBundle({
@@ -79,10 +85,8 @@ aapp.get('/api-docs', (req, res) => {
             dom_id: '#swagger-ui',
             deepLinking: true,
             presets: [
-              SwaggerUIBundle.presets.apis,
-              SwaggerUIStandalonePreset
-            ],
-            layout: "StandaloneLayout"
+              SwaggerUIBundle.presets.apis
+            ]
           });
         };
       </script>
@@ -91,14 +95,26 @@ aapp.get('/api-docs', (req, res) => {
   `);
 });
 
-// Fallback 404
+// Catch-All 404 Route Handler
 app.use((req, res) => {
   res.status(404).json({ status: 'fail', message: 'Route not found' });
 });
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(err.status || 500).json({
+    status: 'error',
+    message: err.message || 'Internal server error'
+  });
+});
+
 module.exports = app;
 
+// Local Development Server Listener
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running locally on port ${PORT}`);
+  });
 }
