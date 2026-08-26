@@ -139,4 +139,4 @@ Description: Fetch past historical announcements for an event
 ## Repository & Submission Assets
 
 - Postman Collection: Located in postman/EventPulse_API.postman_collection.json
-- Postman Environment: Located in postman/EventPulse_Dev.postman_environment.json
+- Postman Environment: Located in postman/EventPulse_Dev.postman_environment.json 
