@@ -180,6 +180,9 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: 'success', message: 'EventPulse API is running' });
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'success', message: 'Server is healthy' });
+});
 
 // --- AUTH ENDPOINTS ---
 app.post('/api/auth/register', (req, res) => {
