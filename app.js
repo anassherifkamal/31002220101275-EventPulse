@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const mongoSanitize = require('express-mongo-sanitize');
 
 // Initialize Express App and HTTP Server for Socket.io
 const app = express();
@@ -18,13 +17,6 @@ const io = new Server(server, {
 // --- Middleware ---
 app.use(express.json());
 app.use(cors());
-
-// Fixed for Express 5 compatibility to prevent read-only query crashes
-app.use(
-  mongoSanitize({
-    allowQueries: true,
-  })
-);
 
 // --- Swagger Documentation via CDN HTML (Vercel-Friendly) ---
 app.get('/api-docs', (req, res) => {
@@ -238,7 +230,6 @@ async function connectDB() {
   }
 }
 
-// Connect safely on serverless/local invocation
 connectDB();
 
 if (process.env.NODE_ENV !== 'production') {
@@ -248,5 +239,4 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export app for serverless environments (like Vercel)
 module.exports = app;
