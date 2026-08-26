@@ -1,8 +1,4 @@
 const mongoose = require('mongoose');
-const dns = require('dns');
-
-// Force IPv4 DNS resolution
-dns.setDefaultResultOrder('ipv4first');
 
 const connectDB = async () => {
   try {
