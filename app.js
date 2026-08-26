@@ -53,24 +53,40 @@ app.get('/api-docs/swagger.json', (req, res) => {
 });
 
 // 3. Fail-Safe API Documentation UI (using Redoc engine - never gets blocked by browser security)
-app.get('/api-docs', (req, res) => {
-  res.setHeader('Content-Type', 'text/html');
-  res.send(`
+aapp.get('/api-docs', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  return res.status(200).send(`
     <!DOCTYPE html>
-    <html>
-      <head>
-        <title>EventPulse API Documentation</title>
-        <meta charset="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-        <style>
-          body { margin: 0; padding: 0; }
-        </style>
-      </head>
-      <body>
-        <redoc spec-url='/api-docs/swagger.json'></redoc>
-        <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
-      </body>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>EventPulse API Documentation</title>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.min.css" />
+      <style>
+        html { box-sizing: border-box; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body { margin: 0; background: #fafafa; }
+      </style>
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-standalone-preset.min.js"></script>
+      <script>
+        window.onload = function() {
+          SwaggerUIBundle({
+            url: "/api-docs/swagger.json",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIStandalonePreset
+            ],
+            layout: "StandaloneLayout"
+          });
+        };
+      </script>
+    </body>
     </html>
   `);
 });
