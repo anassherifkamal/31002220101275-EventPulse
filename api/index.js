@@ -1,5 +1,4 @@
 const express = require('express');
-
 const app = express();
 
 app.use((req, res, next) => {
@@ -37,16 +36,16 @@ const swaggerSpec = {
   }
 };
 
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api-docs/swagger.json', (req, res) => {
+app.get('/api/swagger.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   return res.status(200).json(swaggerSpec);
 });
 
-app.get('/api-docs', (req, res) => {
+app.get('/api/docs', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   return res.status(200).send(`
     <!DOCTYPE html>
@@ -62,7 +61,7 @@ app.get('/api-docs', (req, res) => {
       <script>
         window.onload = function() {
           SwaggerUIBundle({
-            url: "/api-docs/swagger.json",
+            url: "/api/swagger.json",
             dom_id: '#swagger-ui',
             deepLinking: true,
             presets: [SwaggerUIBundle.presets.apis]
@@ -79,8 +78,3 @@ app.use((req, res) => {
 });
 
 module.exports = app;
-
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}

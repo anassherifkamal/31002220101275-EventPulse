@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api-docs", "destination": "/api/docs" },
+    { "source": "/api-docs/swagger.json", "destination": "/api/swagger.json" },
+    { "source": "/health", "destination": "/api/health" }
+  ]
+}
